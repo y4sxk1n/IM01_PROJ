@@ -20,7 +20,7 @@ def init(im1):
     offset = {}
     for i in range (H):
         for j in range(W):
-            offset[(i,j)] = (np.random.randint(0, W) - j, np.random.randint(0, H) - i)
+            offset[(i,j)] = (np.random.randint(0, W) - j, np.random.randint(0, H) - i) # on tire aléatoirement une postion dans l'image B
     return offset 
 
 # fonction distance
@@ -39,6 +39,12 @@ def propag(im1, im2):
     H,W = im1.shape
     dist = {}
     offset = init(im2)
-    for i in range(1,W):
-        for j in range(1,H): 
+    for i in range(H):
+        for j in range(W): 
+            d = distance(patch(im1, (i,j)), patch(im2, (i + offset[(i,j)][0],j + offset[(i,j)][1])))
+            if d >  offset[(i-1,j)]:
+                offset[(i,j)] = offset[(i-1,j)]
+            elif d > offset[(i,j-1)]:
+                offset[(i,j)] = offset[(i,j-1)]
+    
             
