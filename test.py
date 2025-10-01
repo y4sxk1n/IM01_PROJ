@@ -41,7 +41,7 @@ def propag(im1, im2):
     offset = init(im2)
     for i in range(H):
         for j in range(W): 
-            d = distance(patch(im1, (i,j)), patch(im2, (i + offset[(i,j)][0],j + offset[(i,j)][1])))
+            d = distance(patch(copy1, (i,j)), patch(copy2, (i + offset[(i,j)][0],j + offset[(i,j)][1])))
             if d >  offset[(i-1,j)]:
                 offset[(i,j)] = offset[(i-1,j)]
             elif d > offset[(i,j-1)]:
