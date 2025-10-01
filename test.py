@@ -39,12 +39,13 @@ def propag(im1, im2):
     H,W = im1.shape
     dist = {}
     offset = init(im2)
-    for i in range(H):
-        for j in range(W): 
+    for j in range(H):
+        for i in range(W): 
             d = distance(patch(copy1, (i,j)), patch(copy2, (i + offset[(i,j)][0],j + offset[(i,j)][1])))
-            if d >  offset[(i-1,j)]:
+            dist[(i,j)] = d
+            if d >  dist[(i-1,j)]: # je compare pas la bonne chose je crois il faut que je recalcule avec la distance de ce patch mais avec un offset différent !
                 offset[(i,j)] = offset[(i-1,j)]
-            elif d > offset[(i,j-1)]:
+            elif d > dist[(i,j-1)]:
                 offset[(i,j)] = offset[(i,j-1)]
     
             
