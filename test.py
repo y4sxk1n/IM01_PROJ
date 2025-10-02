@@ -33,12 +33,11 @@ def distance(patch1, patch2):
     return dist
 
 # propagation
-def propag(im1, im2, r):
+def propag(im1, im2, r, offset ): # l'argument offset est le dictionnaire des offsets
     copy1 = copier_im(im1, r)
     copy2 = copier_im(im2, r)
     H,W = im1.shape
     dist = {}
-    offset = init(im1)
     # on parcourt d'abord de haut en bas et de gauche à droite, puis on compare avec les voisins de gauche et les voisins du haut
     for j in range(H):
         for i in range(W): 
@@ -68,3 +67,6 @@ def propag(im1, im2, r):
                     offset[(i,j)] = offset[(i,j+1)]
                     dist[(i,j)] = d2
     return dist, offset
+
+def recherche_random(w, offset, dist):
+    
