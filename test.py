@@ -7,7 +7,7 @@ def copier_im(img, r):
     return cv.copyMakeBorder(img, r, r, r, r, borderType=cv.BORDER_CONSTANT, value=0) #on crée un copie de l'image de base pour éviter les problèmes de bord
 
 # défintion d'un patch
-def patch(copy_img, pos, off = 4):
+def patch(copy_img, pos, off):
     # on utilise copy image pour ne pas avoir de problème de bord
     cx = pos[0] + off
     cy = pos[1] + off # pos c'est les coordonnées du centre du patch
@@ -32,38 +32,39 @@ def distance(patch1, patch2):
             dist += (patch1[i,j] - patch2[i,j])**2
     return dist
 
-# propagation et recherche aléatoire locale
-def propag(im1, im2):
-    copy1 = copier_im(im1, 4)
-    copy2 = copier_im(im2, 4)
+# propagation
+def propag(im1, im2, r):
+    copy1 = copier_im(im1, r)
+    copy2 = copier_im(im2, r)
     H,W = im1.shape
     dist = {}
     offset = init(im1)
     # on parcourt d'abord de haut en bas et de gauche à droite, puis on compare avec les voisins de gauche et les voisins du haut
     for j in range(H):
         for i in range(W): 
-            dist[(i,j)] = distance(patch(copy1, (i,j)), patch(copy2, (i + offset[(i,j)][1],j + offset[(i,j)][0])))
+            dist[(i,j)] = distance(patch(copy1, (i,j), r), patch(copy2, (i + offset[(i,j)][1],j + offset[(i,j)][0]), r))
             if i > 0 :
-                d1 = distance(patch(copy1, (i,j)), patch(copy2, (i + offset[(i-1,j)][1],j + offset[(i-1,j)][0])))
+                d1 = distance(patch(copy1, (i,j), r), patch(copy2, (i + offset[(i-1,j)][1],j + offset[(i-1,j)][0]), r))
                 if d1 < dist[(i,j)]: 
                     offset[(i,j)] = offset[(i-1,j)]
                     dist[(i,j)] = d1
             if j > 0:
-                d2 = distance(patch(copy1, (i,j)), patch(copy2, (i + offset[(i,j-1)][1],j + offset[(i,j-1)][0])))
+                d2 = distance(patch(copy1, (i,j), r), patch(copy2, (i + offset[(i,j-1)][1],j + offset[(i,j-1)][0]), r))
                 if d2 < dist[(i,j)]:
                     offset[(i,j)] = offset[(i,j-1)]
                     dist[(i,j)] = d2
     # on parcourt ensuite de bas en haut et de droite, puis on compare avec les voisins de droite et du bas
     for j in range(H-1, -1, -1):
         for i in range(W-1, -1, -1): 
-            dist[(i,j)] = distance(patch(copy1, (i,j)), patch(copy2, (i + offset[(i,j)][1],j + offset[(i,j)][0])))
+            dist[(i,j)] = distance(patch(copy1, (i,j), r), patch(copy2, (i + offset[(i,j)][1],j + offset[(i,j)][0]), r))
             if i < H-1 :
-                d1 = distance(patch(copy1, (i,j)), patch(copy2, (i + offset[(i+1,j)][1],j + offset[(i+1,j)][0])))
+                d1 = distance(patch(copy1, (i,j), r), patch(copy2, (i + offset[(i+1,j)][1],j + offset[(i+1,j)][0]), r))
                 if d1 < dist[(i,j)]: 
                     offset[(i,j)] = offset[(i+1,j)]
                     dist[(i,j)] = d1
             if j < W-1:
-                d2 = distance(patch(copy1, (i,j)), patch(copy2, (i + offset[(i,j+1)][1],j + offset[(i,j+1)][0])))
+                d2 = distance(patch(copy1, (i,j), r), patch(copy2, (i + offset[(i,j+1)][1],j + offset[(i,j+1)][0]), r))
                 if d2 < dist[(i,j)]:
                     offset[(i,j)] = offset[(i,j+1)]
                     dist[(i,j)] = d2
+    return dist, offset
