@@ -32,6 +32,18 @@ def distance(patch1, patch2):
             dist += (patch1[i,j] - patch2[i,j])**2
     return dist
 
+# fonction de recherche randomisée
+def random_search(off,
+                  w = 10, 
+                  alpha = 1/2):
+    u = []
+    i = 0
+    while w*alpha**i > 1 :
+        R = (np.random.uniform(-1, 1), np.random.uniform(-1, 1))
+        u.append(off + np.dot(w*(alpha**i),R))
+        i +=1
+    return u
+
 # propagation
 def propag(im1, im2, r, offset ): # l'argument offset est le dictionnaire des offsets
     copy1 = copier_im(im1, r)
@@ -68,5 +80,3 @@ def propag(im1, im2, r, offset ): # l'argument offset est le dictionnaire des of
                     dist[(i,j)] = d2
     return dist, offset
 
-def recherche_random(w, offset, dist):
-    
