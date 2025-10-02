@@ -39,13 +39,31 @@ def propag(im1, im2):
     H,W = im1.shape
     dist = {}
     offset = init(im2)
+    # on parcourt d'abord de haut en bas et de gauche à droite, puis on compare avec les voisins de gauche et les voisins du haut
     for j in range(H):
         for i in range(W): 
-            d = distance(patch(copy1, (i,j)), patch(copy2, (i + offset[(i,j)][0],j + offset[(i,j)][1])))
-            dist[(i,j)] = d
-            if d >  dist[(i-1,j)]: # je compare pas la bonne chose je crois il faut que je recalcule avec la distance de ce patch mais avec un offset différent !
-                offset[(i,j)] = offset[(i-1,j)]
-            elif d > dist[(i,j-1)]:
-                offset[(i,j)] = offset[(i,j-1)]
-    
-            
+            dist[(i,j)] = distance(patch(copy1, (i,j)), patch(copy2, (i + offset[(i,j)][1],j + offset[(i,j)][0])))
+            if i > 0 :
+                d1 = distance(patch(copy1, (i,j)), patch(copy2, (i + offset[(i-1,j)][1],j + offset[(i-1,j)][0])))
+                if d1 < dist[(i,j)]: 
+                    offset[(i,j)] = offset[(i-1,j)]
+                    dist[(i,j)] = d1
+            if j > 0:
+                d2 = distance(patch(copy1, (i,j)), patch(copy2, (i + offset[(i,j-1)][1],j + offset[(i,j-1)][0])))
+                if d2 < dist[(i,j)]:
+                    offset[(i,j)] = offset[(i,j-1)]
+                    dist[(i,j)] = d2
+    # on parcourt ensuite de bas en haut et de droite, puis on compare avec les voisins de droite et du bas
+    for j in range(H-1, -1, -1):
+        for i in range(W-1, -1, -1): 
+            dist[(i,j)] = distance(patch(copy1, (i,j)), patch(copy2, (i + offset[(i,j)][1],j + offset[(i,j)][0])))
+            if i < H-1 :
+                d1 = distance(patch(copy1, (i,j)), patch(copy2, (i + offset[(i+1,j)][1],j + offset[(i+1,j)][0])))
+                if d1 < dist[(i,j)]: 
+                    offset[(i,j)] = offset[(i+1,j)]
+                    dist[(i,j)] = d1
+            if j < W-1:
+                d2 = distance(patch(copy1, (i,j)), patch(copy2, (i + offset[(i,j+1)][1],j + offset[(i,j+1)][0])))
+                if d2 < dist[(i,j)]:
+                    offset[(i,j)] = offset[(i,j+1)]
+                    dist[(i,j)] = d2
