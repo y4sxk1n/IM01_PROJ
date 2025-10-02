@@ -38,7 +38,7 @@ def propag(im1, im2):
     copy2 = copier_im(im2, 4)
     H,W = im1.shape
     dist = {}
-    offset = init(im2)
+    offset = init(im1)
     # on parcourt d'abord de haut en bas et de gauche à droite, puis on compare avec les voisins de gauche et les voisins du haut
     for j in range(H):
         for i in range(W): 
