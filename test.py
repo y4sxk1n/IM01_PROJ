@@ -1,5 +1,6 @@
 import cv2 as cv
 import numpy as np
+import math 
 
 img = cv.imread("images/lena_gray.bmp", cv.IMREAD_GRAYSCALE)
 
@@ -11,7 +12,7 @@ def patch(copy_img, pos, off):
     # on utilise copy image pour ne pas avoir de problème de bord
     cx = pos[0] + off
     cy = pos[1] + off # pos c'est les coordonnées du centre du patch
-    patch1 = copy_img[cx - off:cy + off + 1, cy - off:cy + off +1] # on fait juste un bloc de pixel de la taille de notre choix
+    patch1 = copy_img[cx - off:cx + off + 1, cy - off:cy + off +1] # on fait juste un bloc de pixel de la taille de notre choix
     return patch1
 
 # initialisation 
@@ -32,6 +33,9 @@ def distance(patch1, patch2):
             dist += (patch1[i,j] - patch2[i,j])**2
     return dist
 
+# def distance(p, q):
+#     return np.linalg.norm(p - q)
+
 # fonction de recherche randomisée
 def random_search(off,
                   w = 10, 
@@ -42,21 +46,25 @@ def random_search(off,
         R = (np.random.uniform(-1, 1), np.random.uniform(-1, 1))
         u.append(off + np.dot(w*(alpha**i),R))
         i +=1
-    return u
+    u_r = []
+    for k in range(len(u)):
+        u_r.append((math.floor(u[k][0]), math.floor(u[k][1])))
+    return u_r
 
 # propagation
 def propag(im1, 
            im2, 
            r, 
            offset ): # l'argument offset est le dictionnaire des offsets
-    copy1 = copier_im(im1, r)
-    copy2 = copier_im(im2, r)
+    copy1 = copier_im(im1, 10000)
+    copy2 = copier_im(im2, 10000)
     H,W = im1.shape
     dist = {}
     # on parcourt d'abord de haut en bas et de gauche à droite, puis on compare avec les voisins de gauche et les voisins du haut
     for j in range(H):
         for i in range(W): 
-            dist[(i,j)] = distance(patch(copy1, (i,j), r), patch(copy2, (i + offset[(i,j)][1],j + offset[(i,j)][0]), r))
+            (i_prime, j_prime) = (i + offset[(i,j)][1],j + offset[(i,j)][0])
+            dist[(i,j)] = distance(patch(copy1, (i,j), r), patch(copy2, (i_prime, j_prime), r))
             if i > 0 :
                 d1 = distance(patch(copy1, (i,j), r), patch(copy2, (i + offset[(i-1,j)][1],j + offset[(i-1,j)][0]), r))
                 if d1 < dist[(i,j)]: 
@@ -69,12 +77,12 @@ def propag(im1,
                     dist[(i,j)] = d2
 
             # recherche aléatoire
-            u = random_search(offset[(i,j)])
-            for k in range(len(u)):
-                d_rd = distance(patch(copy1, (i,j), r), patch(copy2, (i + u[k][1],j + u[k][0]), r)) < dist[(i,j)]
-                if d_rd < dist[(i,j)]:
-                    offset[(i,j)] = u[k]
-                    dist[(i,j)] = d_rd
+            # u = random_search(offset[(i,j)])
+            # for k in range(len(u)):
+            #     d_rd = distance(patch(copy1, (i,j), r), patch(copy2, (i + u[k][1],j + u[k][0]), r)) < dist[(i,j)]
+            #     if d_rd < dist[(i,j)]:
+            #         offset[(i,j)] = u[k]
+            #         dist[(i,j)] = d_rd
 
     # on parcourt ensuite de bas en haut et de droite, puis on compare avec les voisins de droite et du bas
     for j in range(H-1, -1, -1):
@@ -92,12 +100,13 @@ def propag(im1,
                     dist[(i,j)] = d2
 
             # recherche aléatoire
-            u = random_search(offset[(i,j)])
-            for k in range(len(u)):
-                d_rd = distance(patch(copy1, (i,j), r), patch(copy2, (i + u[k][1],j + u[k][0]), r)) < dist[(i,j)]
-                if d_rd < dist[(i,j)]:
-                    offset[(i,j)] = u[k]
-                    dist[(i,j)] = d_rd
+            # u = random_search(offset[(i,j)])
+            # for k in range(len(u)):
+            #     d_rd = distance(patch(copy1, (i,j), r), patch(copy2, (i + u[k][1],j + u[k][0]), r)) < dist[(i,j)]
+            #     if d_rd < dist[(i,j)]:
+            #         offset[(i,j)] = u[k]
+            #         dist[(i,j)] = d_rd
 
     return dist, offset
 
+print(propag(img, img, 4, init(img)))
