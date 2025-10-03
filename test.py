@@ -27,10 +27,11 @@ def init(im1):
 # fonction distance
 def distance(patch1, patch2):
     H, W = patch1.shape
+    # print(patch1.shape, patch2.shape)
     dist = 0
     for i in range(H):
         for j in range(W):
-            dist += (patch1[i,j] - patch2[i,j])**2
+            dist += (int(patch1[i,j]) - int(patch2[i,j]))**2
     return dist
 
 # def distance(p, q):
@@ -55,58 +56,60 @@ def random_search(off,
 def propag(im1, 
            im2, 
            r, 
-           offset ): # l'argument offset est le dictionnaire des offsets
-    copy1 = copier_im(im1, 10000)
-    copy2 = copier_im(im2, 10000)
+           offset, 
+           nb_iters = 15): # l'argument offset est le dictionnaire des offsets
+    copy1 = copier_im(im1, r)
+    copy2 = copier_im(im2, r)
     H,W = im1.shape
     dist = {}
     # on parcourt d'abord de haut en bas et de gauche à droite, puis on compare avec les voisins de gauche et les voisins du haut
-    for j in range(H):
-        for i in range(W): 
-            (i_prime, j_prime) = (i + offset[(i,j)][1],j + offset[(i,j)][0])
-            dist[(i,j)] = distance(patch(copy1, (i,j), r), patch(copy2, (i_prime, j_prime), r))
-            if i > 0 :
-                d1 = distance(patch(copy1, (i,j), r), patch(copy2, (i + offset[(i-1,j)][1],j + offset[(i-1,j)][0]), r))
-                if d1 < dist[(i,j)]: 
-                    offset[(i,j)] = offset[(i-1,j)]
-                    dist[(i,j)] = d1
-            if j > 0:
-                d2 = distance(patch(copy1, (i,j), r), patch(copy2, (i + offset[(i,j-1)][1],j + offset[(i,j-1)][0]), r))
-                if d2 < dist[(i,j)]:
-                    offset[(i,j)] = offset[(i,j-1)]
-                    dist[(i,j)] = d2
+    for _ in range(nb_iters):
+        for i in range(H):
+            for j in range(W): 
+                # (i_prime, j_prime) = (i + offset[(i,j)][1],j + offset[(i,j)][0])
+                dist[(i,j)] = distance(patch(copy1, (i,j), r), patch(copy2, (i + offset[(i,j)][1],j + offset[(i,j)][0]), r))
+                if (i > 0) and  patch(copy2, (i + offset[(i-1,j)][1],j + offset[(i-1,j)][0]), r).shape == (2*r+1, 2*r+1) :
+                    d1 = distance(patch(copy1, (i,j), r), patch(copy2, (i + offset[(i-1,j)][1],j + offset[(i-1,j)][0]), r))
+                    if d1 < dist[(i,j)]: 
+                        offset[(i,j)] = offset[(i-1,j)]
+                        dist[(i,j)] = d1
+                if (j > 0) and patch(copy2, (i + offset[(i,j-1)][1],j + offset[(i,j-1)][0]), r).shape == (2*r+1, 2*r+1) :
+                    d2 = distance(patch(copy1, (i,j), r), patch(copy2, (i + offset[(i,j-1)][1],j + offset[(i,j-1)][0]), r))
+                    if d2 < dist[(i,j)]:
+                        offset[(i,j)] = offset[(i,j-1)]
+                        dist[(i,j)] = d2
 
-            # recherche aléatoire
-            # u = random_search(offset[(i,j)])
-            # for k in range(len(u)):
-            #     d_rd = distance(patch(copy1, (i,j), r), patch(copy2, (i + u[k][1],j + u[k][0]), r)) < dist[(i,j)]
-            #     if d_rd < dist[(i,j)]:
-            #         offset[(i,j)] = u[k]
-            #         dist[(i,j)] = d_rd
+                # recherche aléatoire
+                # u = random_search(offset[(i,j)])
+                # for k in range(len(u)):
+                #     d_rd = distance(patch(copy1, (i,j), r), patch(copy2, (i + u[k][1],j + u[k][0]), r)) < dist[(i,j)]
+                #     if d_rd < dist[(i,j)]:
+                #         offset[(i,j)] = u[k]
+                #         dist[(i,j)] = d_rd
 
-    # on parcourt ensuite de bas en haut et de droite, puis on compare avec les voisins de droite et du bas
-    for j in range(H-1, -1, -1):
-        for i in range(W-1, -1, -1): 
-            dist[(i,j)] = distance(patch(copy1, (i,j), r), patch(copy2, (i + offset[(i,j)][1],j + offset[(i,j)][0]), r))
-            if i < H-1 :
-                d1 = distance(patch(copy1, (i,j), r), patch(copy2, (i + offset[(i+1,j)][1],j + offset[(i+1,j)][0]), r))
-                if d1 < dist[(i,j)]: 
-                    offset[(i,j)] = offset[(i+1,j)]
-                    dist[(i,j)] = d1
-            if j < W-1:
-                d2 = distance(patch(copy1, (i,j), r), patch(copy2, (i + offset[(i,j+1)][1],j + offset[(i,j+1)][0]), r))
-                if d2 < dist[(i,j)]:
-                    offset[(i,j)] = offset[(i,j+1)]
-                    dist[(i,j)] = d2
+        # on parcourt ensuite de bas en haut et de droite, puis on compare avec les voisins de droite et du bas
+        for i in range(H-1, -1, -1):
+            for j in range(W-1, -1, -1): 
+                dist[(i,j)] = distance(patch(copy1, (i,j), r), patch(copy2, (i + offset[(i,j)][1],j + offset[(i,j)][0]), r))
+                if (i < H-1) and  patch(copy2, (i + offset[(i+1,j)][1],j + offset[(i+1,j)][0]), r).shape == (2*r+1, 2*r+1) :
+                    d1 = distance(patch(copy1, (i,j), r), patch(copy2, (i + offset[(i+1,j)][1],j + offset[(i+1,j)][0]), r))
+                    if d1 < dist[(i,j)]: 
+                        offset[(i,j)] = offset[(i+1,j)]
+                        dist[(i,j)] = d1
+                if (j < W-1) and patch(copy2, (i + offset[(i,j+1)][1],j + offset[(i,j+1)][0]), r).shape == (2*r+1, 2*r+1) :
+                    d2 = distance(patch(copy1, (i,j), r), patch(copy2, (i + offset[(i,j+1)][1],j + offset[(i,j+1)][0]), r))
+                    if d2 < dist[(i,j)]:
+                        offset[(i,j)] = offset[(i,j+1)]
+                        dist[(i,j)] = d2
 
-            # recherche aléatoire
-            # u = random_search(offset[(i,j)])
-            # for k in range(len(u)):
-            #     d_rd = distance(patch(copy1, (i,j), r), patch(copy2, (i + u[k][1],j + u[k][0]), r)) < dist[(i,j)]
-            #     if d_rd < dist[(i,j)]:
-            #         offset[(i,j)] = u[k]
-            #         dist[(i,j)] = d_rd
+                # recherche aléatoire
+                # u = random_search(offset[(i,j)])
+                # for k in range(len(u)):
+                #     d_rd = distance(patch(copy1, (i,j), r), patch(copy2, (i + u[k][1],j + u[k][0]), r)) < dist[(i,j)]
+                #     if d_rd < dist[(i,j)]:
+                #         offset[(i,j)] = u[k]
+                #         dist[(i,j)] = d_rd
 
     return dist, offset
 
-print(propag(img, img, 4, init(img)))
+print(propag(img, img, 4, init(img))[1])
