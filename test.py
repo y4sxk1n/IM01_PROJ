@@ -39,25 +39,31 @@ def distance(patch1, patch2):
 
 # fonction de recherche randomisée
 def random_search(off,
+                  r, # demie taille du patch
+                  i, # abscisse de l'offset dans A
+                  j, # ordonnée de l'offset dans A
+                  H,
+                  W,
                   w = 10, 
                   alpha = 1/2):
     u = []
-    i = 0
-    while w*alpha**i > 1 :
-        R = (np.random.uniform(-1, 1), np.random.uniform(-1, 1))
-        u.append(off + np.dot(w*(alpha**i),R))
-        i +=1
+    k = 0
+    while w*alpha**k > 1 :
+        R = (np.random.uniform(-1, 1), np.random.uniform(-1, 1))   
+        u.append((off[0] + w*(alpha**k)*R[0], off[1] + w*(alpha**k)*R[1]))
+        k +=1
     u_r = []
     for k in range(len(u)):
-        u_r.append((math.floor(u[k][0]), math.floor(u[k][1])))
+        if (r <= i + math.floor(u[k][1]) < H - r) and (r <= j + math.floor(u[k][0]) < W - r): # on vérifie si on est bien dans le patch
+            u_r.append((math.floor(u[k][0]), math.floor(u[k][1])))
     return u_r
 
 # propagation
 def propag(im1, 
            im2, 
            r, 
-           offset, 
-           nb_iters = 15): # l'argument offset est le dictionnaire des offsets
+           offset,      # l'argument offset est le dictionnaire des offsets
+           nb_iters = 4): 
     copy1 = copier_im(im1, r)
     copy2 = copier_im(im2, r)
     H,W = im1.shape
@@ -80,12 +86,12 @@ def propag(im1,
                         dist[(i,j)] = d2
 
                 # recherche aléatoire
-                # u = random_search(offset[(i,j)])
-                # for k in range(len(u)):
-                #     d_rd = distance(patch(copy1, (i,j), r), patch(copy2, (i + u[k][1],j + u[k][0]), r)) < dist[(i,j)]
-                #     if d_rd < dist[(i,j)]:
-                #         offset[(i,j)] = u[k]
-                #         dist[(i,j)] = d_rd
+                u = random_search(offset[(i,j)], r,i, j, H, W)
+                for k in range(len(u)):
+                    d_rd = distance(patch(copy1, (i,j), r), patch(copy2, (i + u[k][1],j + u[k][0]), r)) 
+                    if d_rd < dist[(i,j)]:
+                        offset[(i,j)] = u[k]
+                        dist[(i,j)] = d_rd
 
         # on parcourt ensuite de bas en haut et de droite, puis on compare avec les voisins de droite et du bas
         for i in range(H-1, -1, -1):
@@ -103,13 +109,15 @@ def propag(im1,
                         dist[(i,j)] = d2
 
                 # recherche aléatoire
-                # u = random_search(offset[(i,j)])
-                # for k in range(len(u)):
-                #     d_rd = distance(patch(copy1, (i,j), r), patch(copy2, (i + u[k][1],j + u[k][0]), r)) < dist[(i,j)]
-                #     if d_rd < dist[(i,j)]:
-                #         offset[(i,j)] = u[k]
-                #         dist[(i,j)] = d_rd
+                u = random_search(offset[(i,j)], r, i, j, H, W)
+                for k in range(len(u)):
+                    d_rd = distance(patch(copy1, (i,j), r), patch(copy2, (i + u[k][1],j + u[k][0]), r)) 
+                    if d_rd < dist[(i,j)]:
+                        offset[(i,j)] = u[k]
+                        dist[(i,j)] = d_rd
 
     return dist, offset
+
+
 
 print(propag(img, img, 4, init(img))[1])
