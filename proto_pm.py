@@ -1,6 +1,7 @@
 import cv2 as cv
 import numpy as np
 import math
+import matplotlib as plt
 
 img = cv.imread("images/lena_gray.bmp", cv.IMREAD_GRAYSCALE)
 
@@ -35,7 +36,30 @@ def distance(patch1, patch2):
 
 # fonction de recherche randomisée
 def random_search(im1, im2, r, offsets, dist, w=10, alpha=0.5):
-    ...
+    H, W = im1.shape
+    k = 0
+    for i in range(H):
+        for j in range(W):
+            dx, dy = offsets[i, j]
+            best_dist = dist[i, j]
+            x_best = j + dx
+            y_best = i + dy
+            while w*alpha**k > 1 :
+                R = (np.random.uniform(-1, 1), np.random.uniform(-1, 1))   
+                x_new = int(x_best + (w*alpha**k) * R[0])
+                y_new = int(y_best + (w*alpha**k) * R[1])
+                if r <= x_new < W - r and r <= y_new < H - r:
+                    p1 = patch(im1, (i, j), r)
+                    p2 = patch(im2, (y_new, x_new), r)
+                    if p1.shape == p2.shape:
+                        d = distance(p1, p2)
+                        print("new_dist = ", d)
+                        if d < best_dist:
+                            print("FOUND BETTER DISTANCE!")
+                            best_dist = d
+                            offsets[i, j] = [x_new - j, y_new - i]
+                            dist[i, j] = d
+                k+=1
 
 # propag
 def propag(im1, im2, r, offsets, direction='forward'):
@@ -48,7 +72,11 @@ def propag(im1, im2, r, offsets, direction='forward'):
         for i in range(H):
             for j in range(W):
                 dx, dy = offsets[i, j]
-                d_cur = distance(patch(copy1, (i, j), r), patch(copy2, (i + dy, j + dx), r))
+                p1 = patch(copy1, (i, j), r)
+                p2 = patch(copy2, (i + dy, j + dx), r)
+                if p1.shape != (2*r + 1, 2*r + 1) or p2.shape != (2*r + 1, 2*r + 1):
+                    continue 
+                d_cur = distance(p1, p2)
                 dist[i, j] = d_cur
 
                 # voisin du haut
@@ -69,7 +97,11 @@ def propag(im1, im2, r, offsets, direction='forward'):
         for i in range(H-1, -1, -1):
             for j in range(W-1, -1, -1):
                 dx, dy = offsets[i, j]
-                d_cur = distance(patch(copy1, (i, j), r), patch(copy2, (i + dy, j + dx), r))
+                p1 = patch(copy1, (i, j), r)
+                p2 = patch(copy2, (i + dy, j + dx), r)
+                if p1.shape != (2*r + 1, 2*r + 1) or p2.shape != (2*r + 1, 2*r + 1):
+                    continue 
+                d_cur = distance(p1, p2)
                 dist[i, j] = d_cur
 
                 # voisin du bas
@@ -90,17 +122,81 @@ def propag(im1, im2, r, offsets, direction='forward'):
 
 
 # patchmatch
-def patchmatch(im1, im2, r, offsets, nb_iters = 15): # l'argument offset est le dictionnaire des offsets
-    for _ in range(nb_iters):
+def patchmatch(im1, im2, r, offsets, nb_iters = 5): # l'argument offset est le dictionnaire des offsets
+    for _ in range(1, nb_iters+1):
+
+        print("IT NUMBER: ", _)
+
+        # print("FORWARD PROPAG...")
+
         # on parcourt d'abord de haut en bas et de gauche à droite, puis on compare avec les voisins de gauche et les voisins du haut
         offsets, dist = propag(im1, im2, r, offsets, direction='forward')
+
+        # print("END FORWARD PROPAG")
+
+        # print("BACKWARD PROPAG...")
         
         # on parcourt ensuite de bas en haut et de droite, puis on compare avec les voisins de droite et du bas
         offsets, dist = propag(im1, im2, r, offsets, direction='backward')
 
-        # on effectue la recherche randomisée
-        # offsets, dist = random_search(im1, im2, r, offsets, dist, w=10, alpha=0.5)
+        # print("END BACKWARD PROPAG")
+
+        # print("RANDOM SEARCH...")
+
+        random_search(im1, im2, r, offsets, dist, w=10, alpha=0.5)
+
+        # print("END RANDOM SEARCH")
 
     return offsets, dist
 
-print(patchmatch(img, img, 4, init_off(img))[0])   
+scale = .25
+
+img1 = cv.imread("images/trainspotting_1.png", cv.IMREAD_GRAYSCALE)
+img1 = cv.resize(img1, None, fx=scale, fy=scale, interpolation=cv.INTER_LINEAR)
+# cv.imshow("image1", img1)
+# cv.waitKey(0)
+# cv.destroyAllWindows()
+
+img2 = cv.imread("images/trainspotting_2.png", cv.IMREAD_GRAYSCALE)
+img2 = cv.resize(img2, None, fx=scale, fy=scale, interpolation=cv.INTER_LINEAR)
+# cv.imshow("image2", img2)
+# cv.waitKey(0)
+# cv.destroyAllWindows()
+
+
+offsets = patchmatch(img1, img2, 4, init_off(img1))[0]
+print(offsets)
+
+def remap(img1, offsets, r):
+    img2 = np.zeros_like(img1, dtype=float)
+    h, w = img1.shape
+    weights = np.zeros((h, w), dtype=float)
+
+    for i in range(h):
+        for j in range(w):
+
+            dx = offsets[i, j, 0]
+            dy = offsets[i, j, 1]
+            i2 = i + dy
+            j2 = j + dx
+
+            for u in range(-r, r + 1):
+                for v in range(-r, r + 1):
+                    y = i + u
+                    x = j + v
+                    y2 = i2 + u
+                    x2 = j2 + v
+
+                    if (0 <= y < h and 0 <= x < w and 0 <= y2 < h and 0 <= x2 < w):
+                        img2[y2, x2] += img1[y, x]
+                        weights[y2, x2] += 1.0
+
+    img2 = img2 / np.maximum(weights, 1e-8)
+    img2 = np.clip(img2, 0, 255)
+    return img2.astype(np.uint8)
+
+new_img = remap(img1, offsets, 4)
+cv.imshow("image", new_img)
+cv.waitKey(0)
+cv.destroyAllWindows()
+
