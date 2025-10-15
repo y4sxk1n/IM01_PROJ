@@ -35,21 +35,29 @@ def distance(patch1, patch2):
     return dist
 
 # fonction de recherche randomisée
-def random_search(im1, im2, r, offsets, dist, w=10, alpha=0.5):
+def random_search(im1, im2, r, offsets, dist, w=100, alpha=0.5):
     H, W = im1.shape
-    k = 0
+    w = min(W, H)
     for i in range(H):
         for j in range(W):
+            k = 0
             dx, dy = offsets[i, j]
             best_dist = dist[i, j]
             x_best = j + dx
             y_best = i + dy
-            while w*alpha**k > 1 :
-                R = (np.random.uniform(-1, 1), np.random.uniform(-1, 1))   
-                x_new = int(x_best + (w*alpha**k) * R[0])
-                y_new = int(y_best + (w*alpha**k) * R[1])
-                if r <= x_new < W - r and r <= y_new < H - r:
-                    p1 = patch(im1, (i, j), r)
+            p1 = patch(im1, (i, j), r)
+            while w * alpha**k > 1 :
+                R = (np.random.uniform(-1, 1), np.random.uniform(-1, 1)) 
+                # print(x_best + ((w*alpha**k) * R[0]))
+                # print(int(x_best + ((w*alpha**k) * R[0])))
+                x_new = int(x_best + (w * alpha**k) * R[0])
+                y_new = int(y_best + (w * alpha**k) * R[1])
+                if (w * alpha**k) > 5:
+                    print("offsets =", dx, dy,"x_best =", x_best, "scale =", w * alpha**k, "→ x_new =", x_new)
+
+
+                # print(x_new, y_new)
+                if 0 <= x_new < W and 0 <= y_new < H:
                     p2 = patch(im2, (y_new, x_new), r)
                     if p1.shape == p2.shape:
                         d = distance(p1, p2)
@@ -59,36 +67,41 @@ def random_search(im1, im2, r, offsets, dist, w=10, alpha=0.5):
                             best_dist = d
                             offsets[i, j] = [x_new - j, y_new - i]
                             dist[i, j] = d
+
+                else: 
+                    continue
                 k+=1
+
+    return offsets, dist
 
 # propag
 def propag(im1, im2, r, offsets, direction='forward'):
     H, W = im1.shape
+    print(H, W)
     dist = np.zeros((H, W))
-    copy1 = copy_im(im1, r)
-    copy2 = copy_im(im2, r)
+    
 
     if direction == 'forward':
         for i in range(H):
             for j in range(W):
                 dx, dy = offsets[i, j]
-                p1 = patch(copy1, (i, j), r)
-                p2 = patch(copy2, (i + dy, j + dx), r)
+                p1 = patch(im1, (i, j), r)
+                p2 = patch(im2, (i + dy, j + dx), r)
                 if p1.shape != (2*r + 1, 2*r + 1) or p2.shape != (2*r + 1, 2*r + 1):
                     continue 
                 d_cur = distance(p1, p2)
                 dist[i, j] = d_cur
 
                 # voisin du haut
-                if i > 0 and patch(copy2, (i + offsets[i-1, j][1], j + offsets[i-1, j][0]), r).shape == (2*r+1, 2*r+1):
-                    d1 = distance(patch(copy1, (i, j), r), patch(copy2, (i + offsets[i-1, j][1], j + offsets[i-1, j][0]), r))
+                if i > 0 and patch(im2, (i + offsets[i-1, j][1], j + offsets[i-1, j][0]), r).shape == (2*r+1, 2*r+1):
+                    d1 = distance(patch(im1, (i, j), r), patch(im2, (i + offsets[i-1, j][1], j + offsets[i-1, j][0]), r))
                     if d1 < dist[i, j]:
                         offsets[i, j] = offsets[i-1, j]
                         dist[i, j] = d1
 
                 # voisin de gauche
-                if j > 0 and patch(copy2, (i + offsets[i, j-1][1], j + offsets[i, j-1][0]), r).shape == (2*r+1, 2*r+1):
-                    d2 = distance(patch(copy1, (i, j), r), patch(copy2, (i + offsets[i, j-1][1], j + offsets[i, j-1][0]), r))
+                if j > 0 and patch(im2, (i + offsets[i, j-1][1], j + offsets[i, j-1][0]), r).shape == (2*r+1, 2*r+1):
+                    d2 = distance(patch(im1, (i, j), r), patch(im2, (i + offsets[i, j-1][1], j + offsets[i, j-1][0]), r))
                     if d2 < dist[i, j]:
                         offsets[i, j] = offsets[i, j-1]
                         dist[i, j] = d2
@@ -97,23 +110,23 @@ def propag(im1, im2, r, offsets, direction='forward'):
         for i in range(H-1, -1, -1):
             for j in range(W-1, -1, -1):
                 dx, dy = offsets[i, j]
-                p1 = patch(copy1, (i, j), r)
-                p2 = patch(copy2, (i + dy, j + dx), r)
+                p1 = patch(im1, (i, j), r)
+                p2 = patch(im2, (i + dy, j + dx), r)
                 if p1.shape != (2*r + 1, 2*r + 1) or p2.shape != (2*r + 1, 2*r + 1):
                     continue 
                 d_cur = distance(p1, p2)
                 dist[i, j] = d_cur
 
                 # voisin du bas
-                if i < H-1 and patch(copy2, (i + offsets[i+1, j][1], j + offsets[i+1, j][0]), r).shape == (2*r+1, 2*r+1):
-                    d1 = distance(patch(copy1, (i, j), r), patch(copy2, (i + offsets[i+1, j][1], j + offsets[i+1, j][0]), r))
+                if i < H-1 and patch(im1, (i + offsets[i+1, j][1], j + offsets[i+1, j][0]), r).shape == (2*r+1, 2*r+1):
+                    d1 = distance(patch(im2, (i, j), r), patch(im2, (i + offsets[i+1, j][1], j + offsets[i+1, j][0]), r))
                     if d1 < dist[i, j]:
                         offsets[i, j] = offsets[i+1, j]
                         dist[i, j] = d1
 
                 # voisin de droite
-                if j < W-1 and patch(copy2, (i + offsets[i, j+1][1], j + offsets[i, j+1][0]), r).shape == (2*r+1, 2*r+1):
-                    d2 = distance(patch(copy1, (i, j), r),patch(copy2, (i + offsets[i, j+1][1], j + offsets[i, j+1][0]), r))
+                if j < W-1 and patch(im2, (i + offsets[i, j+1][1], j + offsets[i, j+1][0]), r).shape == (2*r+1, 2*r+1):
+                    d2 = distance(patch(im1, (i, j), r),patch(im1, (i + offsets[i, j+1][1], j + offsets[i, j+1][0]), r))
                     if d2 < dist[i, j]:
                         offsets[i, j] = offsets[i, j+1]
                         dist[i, j] = d2
@@ -124,47 +137,50 @@ def propag(im1, im2, r, offsets, direction='forward'):
 # patchmatch
 def patchmatch(im1, im2, r, offsets, nb_iters = 5): # l'argument offset est le dictionnaire des offsets
     for _ in range(1, nb_iters+1):
-
+        copy1 = copy_im(im1, r)
+        copy2 = copy_im(im2, r)
         print("IT NUMBER: ", _)
 
         # print("FORWARD PROPAG...")
 
         # on parcourt d'abord de haut en bas et de gauche à droite, puis on compare avec les voisins de gauche et les voisins du haut
-        offsets, dist = propag(im1, im2, r, offsets, direction='forward')
+        offsets, dist = propag(copy1, copy2, r, offsets, direction='forward')
 
         # print("END FORWARD PROPAG")
 
         # print("BACKWARD PROPAG...")
         
         # on parcourt ensuite de bas en haut et de droite, puis on compare avec les voisins de droite et du bas
-        offsets, dist = propag(im1, im2, r, offsets, direction='backward')
+        offsets, dist = propag(copy1, copy2, r, offsets, direction='backward')
 
         # print("END BACKWARD PROPAG")
 
         # print("RANDOM SEARCH...")
 
-        random_search(im1, im2, r, offsets, dist, w=10, alpha=0.5)
+        offsets, dist = random_search(copy1, copy2, r, offsets, dist, alpha=0.5)
 
         # print("END RANDOM SEARCH")
 
     return offsets, dist
 
-scale = .25
+# scale = .2
 
-img1 = cv.imread("images/trainspotting_1.png", cv.IMREAD_GRAYSCALE)
-img1 = cv.resize(img1, None, fx=scale, fy=scale, interpolation=cv.INTER_LINEAR)
+# img1 = cv.imread("images/trainspotting_1.png", cv.IMREAD_GRAYSCALE)
+# img1 = cv.resize(img1, None, fx=scale, fy=scale, interpolation=cv.INTER_LINEAR)
 # cv.imshow("image1", img1)
 # cv.waitKey(0)
 # cv.destroyAllWindows()
 
-img2 = cv.imread("images/trainspotting_2.png", cv.IMREAD_GRAYSCALE)
-img2 = cv.resize(img2, None, fx=scale, fy=scale, interpolation=cv.INTER_LINEAR)
+# img2 = cv.imread("images/trainspotting_2.png", cv.IMREAD_GRAYSCALE)
+# img2 = cv.resize(img2, None, fx=scale, fy=scale, interpolation=cv.INTER_LINEAR)
 # cv.imshow("image2", img2)
 # cv.waitKey(0)
 # cv.destroyAllWindows()
 
 
-offsets = patchmatch(img1, img2, 4, init_off(img1))[0]
+# offsets = patchmatch(img1, img2, 4, init_off(img1))[0]
+
+offsets = patchmatch(img, img, 4, init_off(img))[0]
 print(offsets)
 
 def remap(img1, offsets, r):
@@ -195,7 +211,7 @@ def remap(img1, offsets, r):
     img2 = np.clip(img2, 0, 255)
     return img2.astype(np.uint8)
 
-new_img = remap(img1, offsets, 4)
+new_img = remap(img, offsets, 4)
 cv.imshow("image", new_img)
 cv.waitKey(0)
 cv.destroyAllWindows()
