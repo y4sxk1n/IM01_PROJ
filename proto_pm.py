@@ -61,9 +61,7 @@ def random_search(im1, im2, r, offsets, dist, w=100, alpha=0.5):
                     p2 = patch(im2, (y_new, x_new), r)
                     if p1.shape == p2.shape:
                         d = distance(p1, p2)
-                        print("new_dist = ", d)
                         if d < best_dist:
-                            print("FOUND BETTER DISTANCE!")
                             best_dist = d
                             offsets[i, j] = [x_new - j, y_new - i]
                             dist[i, j] = d
