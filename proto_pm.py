@@ -3,7 +3,7 @@ import numpy as np
 import math
 import matplotlib as plt
 
-img = cv.imread("images/lena_gray.bmp", cv.IMREAD_GRAYSCALE)
+img = cv.imread("images/lena_gray.bmp", cv.IMREAD_COLOR)
 
 def copy_im(img, r):
     return cv.copyMakeBorder(img, r, r, r, r, borderType=cv.BORDER_CONSTANT, value=0) #on crée un copie de l'image de base pour éviter les problèmes de bord
@@ -18,7 +18,7 @@ def patch(copy_img, pos, r):
 
 # initialisation 
 def init_off(img):
-    H, W = img.shape
+    H, W = img.shape[:2]  
     offsets = np.zeros((H, W, 2), dtype=int)
     for i in range(H):
         for j in range(W): 
@@ -26,17 +26,13 @@ def init_off(img):
     return offsets
 
 # fonction distance
-def distance(patch1, patch2):
-    H, W = patch1.shape
-    dist = 0
-    for i in range(H):
-        for j in range(W):
-            dist += (patch1[i,j] - patch2[i,j])**2
-    return dist
+def distance(p1, p2):
+    d = p1.astype(np.float32) - p2.astype(np.float32)
+    return float(np.sum(d*d))
 
 # fonction de recherche randomisée
 def random_search(im1, im2, r, offsets, dist, w=100, alpha=0.5):
-    H, W = im1.shape
+    H, W = img.shape[:2]  
     w = min(W, H)
     for i in range(H):
         for j in range(W):
@@ -67,14 +63,14 @@ def random_search(im1, im2, r, offsets, dist, w=100, alpha=0.5):
                             dist[i, j] = d
 
                 else: 
-                    continue
+                    continue    # tant qu'on ne se trouve pas dans l'image la boucle reste au même k
                 k+=1
 
     return offsets, dist
 
 # propag
 def propag(im1, im2, r, offsets, direction='forward'):
-    H, W = im1.shape
+    H, W = img.shape[:2]  
     print(H, W)
     dist = np.zeros((H, W))
     
@@ -85,7 +81,7 @@ def propag(im1, im2, r, offsets, direction='forward'):
                 dx, dy = offsets[i, j]
                 p1 = patch(im1, (i, j), r)
                 p2 = patch(im2, (i + dy, j + dx), r)
-                if p1.shape != (2*r + 1, 2*r + 1) or p2.shape != (2*r + 1, 2*r + 1):
+                if p1.shape[:2] != (2*r + 1, 2*r + 1) or p2.shape[:2] != (2*r + 1, 2*r + 1):
                     continue 
                 d_cur = distance(p1, p2)
                 dist[i, j] = d_cur
@@ -110,7 +106,7 @@ def propag(im1, im2, r, offsets, direction='forward'):
                 dx, dy = offsets[i, j]
                 p1 = patch(im1, (i, j), r)
                 p2 = patch(im2, (i + dy, j + dx), r)
-                if p1.shape != (2*r + 1, 2*r + 1) or p2.shape != (2*r + 1, 2*r + 1):
+                if p1.shape[:2] != (2*r + 1, 2*r + 1) or p2.shape[:2] != (2*r + 1, 2*r + 1):
                     continue 
                 d_cur = distance(p1, p2)
                 dist[i, j] = d_cur
@@ -183,11 +179,12 @@ print(offsets)
 
 def remap(img1, offsets, r):
     img2 = np.zeros_like(img1, dtype=float)
-    h, w = img1.shape
-    weights = np.zeros((h, w), dtype=float)
+    H, W = img1.shape[:2]  
+    weights = np.zeros((H, W), dtype=float)
+    C = 1 if img1.ndim == 2 else img1.shape[2] # gère le cas des images en niveaux de gris et en couleur
 
-    for i in range(h):
-        for j in range(w):
+    for i in range(H):
+        for j in range(W):
 
             dx = offsets[i, j, 0]
             dy = offsets[i, j, 1]
@@ -201,11 +198,17 @@ def remap(img1, offsets, r):
                     y2 = i2 + u
                     x2 = j2 + v
 
-                    if (0 <= y < h and 0 <= x < w and 0 <= y2 < h and 0 <= x2 < w):
-                        img2[y2, x2] += img1[y, x]
+                    if (0 <= y < H and 0 <= x < W and 0 <= y2 < H and 0 <= x2 < W):
+                        if C == 1:
+                            img2[y2, x2] += img1[y, x]
+                        else:
+                            img2[y2, x2, :] += img1[y, x, :] # quand c'est une image en couleur il faut gérer les 3 canaux
                         weights[y2, x2] += 1.0
 
-    img2 = img2 / np.maximum(weights, 1e-8)
+    if C == 1:
+        img2 /= np.maximum(weights, 1e-8)
+    else:
+        img2 /= np.maximum(weights, 1e-8)[:, :, None] # idem pour les images en couleur, il faut gérer les 3 canaux
     img2 = np.clip(img2, 0, 255)
     return img2.astype(np.uint8)
 
