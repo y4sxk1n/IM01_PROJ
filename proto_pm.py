@@ -152,7 +152,6 @@ def patchmatch(im1, im2, r, offsets, nb_iters = 5): # l'argument offset est le d
         # # offsets, dist = random_search(im1, im2, r, offsets, dist, alpha=0.5)
 
         # print("END RANDOM SEARCH")
-
     return offsets, dist
 
 # scale = .25
